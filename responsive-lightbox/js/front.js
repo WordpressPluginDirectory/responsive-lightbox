@@ -461,51 +461,6 @@
 				} );
 				break;
 
-			case 'fancybox':
-				var lastImage = '';
-
-				$( 'a[rel*="' + selector + '"], a[data-rel*="' + selector + '"]' ).fancybox( {
-					modal: args.modal,
-					overlayShow: args.showOverlay,
-					showCloseButton: args.showCloseButton,
-					enableEscapeButton: args.enableEscapeButton,
-					hideOnOverlayClick: args.hideOnOverlayClick,
-					hideOnContentClick: args.hideOnContentClick,
-					cyclic: args.cyclic,
-					showNavArrows: args.showNavArrows,
-					autoScale: args.autoScale,
-					scrolling: args.scrolling,
-					centerOnScroll: args.centerOnScroll,
-					opacity: args.opacity,
-					overlayOpacity: parseFloat( args.overlayOpacity / 100 ),
-					overlayColor: args.overlayColor,
-					titleShow: args.titleShow,
-					titlePosition: args.titlePosition,
-					transitionIn: args.transitions,
-					transitionOut: args.transitions,
-					easingIn: args.easings,
-					easingOut: args.easings,
-					speedIn: parseInt( args.speeds ),
-					speedOut: parseInt( args.speeds ),
-					changeSpeed: parseInt( args.changeSpeed ),
-					changeFade: parseInt( args.changeFade ),
-					padding: parseInt( args.padding ),
-					margin: parseInt( args.margin ),
-					width: parseInt( args.videoWidth ),
-					height: parseInt( args.videoHeight ),
-					onComplete: function() {
-						lastImage = $( '#fancybox-content' ).find( 'img' ).attr( 'src' );
-
-						// trigger image view
-						rl_view_image( script, lastImage );
-					},
-					onClosed: function() {
-						// trigger image hide
-						rl_hide_image( script, lastImage );
-					}
-				} );
-				break;
-
 			case 'nivo':
 				$.each( $( 'a[rel*="' + selector + '"], a[data-rel*="' + selector + '"]' ), function() {
 					var attr = $( this ).attr( 'data-rel' );
@@ -714,6 +669,17 @@
 				break;
 
 			case 'featherlight':
+				delete $.featherlight.contentFilters.jquery;
+
+				$.extend( $.featherlight.contentFilters, {
+					html: {
+						regex: /[^]/, // it will also handle jquery and any unspecified content type
+						process: function( html ) {
+							return $( '<div>', { text: html } );
+						}
+					}
+				} );
+
 				var selectors = [];
 				var lastImage = '';
 
@@ -738,6 +704,7 @@
 
 					// set defaults
 					$.extend( $.featherlight.defaults, {
+						contentFilters: ['image', 'html', 'ajax', 'iframe', 'text'],
 						openSpeed: parseInt( args.openSpeed ),
 						closeSpeed: parseInt( args.closeSpeed ),
 						closeOnClick: args.closeOnClick,
@@ -831,6 +798,8 @@
 							fixedBgPos = false;
 
 						subselector.magnificPopup( {
+							allowHTMLInStatusIndicator: false,
+							allowHTMLInTemplate: true,
 							type: media_type === 'gallery' ? 'image' : ( media_type === 'video' ? 'iframe' : media_type ),
 							disableOn: args.disableOn,
 							midClick: args.midClick,
@@ -851,9 +820,19 @@
 
 									if ( ! title )
 										title = '';
+									else {
+										title = title.replace( /[^]/g, function( c ) {
+											return '&#' + c.charCodeAt( 0 ) + ';';
+										} );
+									}
 
 									if ( ! caption )
 										caption = '';
+									else {
+										caption = caption.replace( /[^]/g, function( c ) {
+											return '&#' + c.charCodeAt( 0 ) + ';';
+										} );
+									}
 
 									return title + '<small>' + caption + '</small>';
 								}
@@ -870,6 +849,14 @@
 								imageLoadComplete: function() {
 									// trigger image view
 									rl_view_image( script, this.currItem.src );
+								},
+								elementParse: function( item ) {
+									if ( item.src.trim().includes( '<' ) ) {
+										if ( item.type === 'inline' )
+											item.src = '<div>HTML is disallowed.</div>';
+										else if ( item.type === 'iframe' || item.type === 'ajax' )
+											item.src = '';
+									}
 								}
 							}
 						} );
