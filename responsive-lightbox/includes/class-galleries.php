@@ -3752,7 +3752,18 @@ class Responsive_Lightbox_Galleries {
 		switch ( $featured_image_type ) {
 			// custom url
 			case 'url':
-				$image = esc_url( $featured_image );
+				$frontend = function_exists( 'Responsive_Lightbox' ) ? Responsive_Lightbox()->frontend : null;
+				if ( $frontend && method_exists( $frontend, 'sanitize_remote_image_url' ) )
+					$featured_image = $frontend->sanitize_remote_image_url( $featured_image );
+				else
+					$featured_image = '';
+
+				if ( $featured_image !== '' ) {
+					$image = esc_url( $featured_image );
+					break;
+				}
+
+				$image = $this->get_first_gallery_featured_image( $gallery_id );
 				break;
 
 			// attachment id
@@ -3764,23 +3775,31 @@ class Responsive_Lightbox_Galleries {
 			// first image
 			case 'image':
 			default:
-				// get first gallery image
-				$images = $this->get_gallery_images(
-					$gallery_id,
-					[
-						'exclude'	=> true,
-						'limit'		=> 1
-					]
-				);
-
-				// set image data
-				if ( $images )
-					$image = reset( $images );
-				else
-					$image = 0;
+				$image = $this->get_first_gallery_featured_image( $gallery_id );
 		}
 
 		return apply_filters( 'rl_get_featured_image_src', $image, $gallery_id, $featured_image_type, $featured_image );
+	}
+
+	/**
+	 * Helper to fetch the first gallery image data.
+	 *
+	 * @param int $gallery_id
+	 * @return array|int
+	 */
+	protected function get_first_gallery_featured_image( $gallery_id ) {
+		$images = $this->get_gallery_images(
+			$gallery_id,
+			[
+				'exclude'	=> true,
+				'limit'		=> 1
+			]
+		);
+
+		if ( $images )
+			return reset( $images );
+
+		return 0;
 	}
 
 	/**
@@ -4773,7 +4792,15 @@ class Responsive_Lightbox_Galleries {
 			// custom url
 			case 'url':
 				$thumbnail_id = $this->maybe_generate_thumbnail();
-				$featured_image = isset( $post_data['_rl_thumbnail_url'] ) ? esc_url_raw( $post_data['_rl_thumbnail_url'] ) : '';
+				$frontend = function_exists( 'Responsive_Lightbox' ) ? Responsive_Lightbox()->frontend : null;
+				$custom_url = isset( $post_data['_rl_thumbnail_url'] ) ? $post_data['_rl_thumbnail_url'] : '';
+				if ( $frontend && method_exists( $frontend, 'sanitize_remote_image_url' ) )
+					$featured_image = $frontend->sanitize_remote_image_url( $custom_url );
+				else
+					$featured_image = '';
+
+				if ( $featured_image === '' )
+					$featured_image_type = 'image';
 				break;
 
 			// first image
@@ -5023,6 +5050,9 @@ class Responsive_Lightbox_Galleries {
 	public function admin_post_thumbnail_html( $content, $post_id, $thumbnail_id ) {
 		if ( get_post_type( $post_id ) === 'rl_gallery' ) {
 			$value = get_post_meta( $post_id, '_rl_featured_image', true );
+			$frontend = function_exists( 'Responsive_Lightbox' ) ? Responsive_Lightbox()->frontend : null;
+			if ( $frontend && method_exists( $frontend, 'sanitize_remote_image_url' ) )
+				$value = $frontend->sanitize_remote_image_url( $value );
 			$type = get_post_meta( $post_id, '_rl_featured_image_type', true );
 			$type = ! empty( $type ) && in_array( $type, array( 'image', 'id', 'url' ) ) ? $type : 'image';
 

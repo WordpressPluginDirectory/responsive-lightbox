@@ -495,6 +495,14 @@ class Responsive_Lightbox_Settings {
 						'label' => __( 'Enable remote libraries.', 'responsive-lightbox' ),
 						'description' => __( 'Check this to enable remote access to the following image libraries.', 'responsive-lightbox' )
 					],
+					'max_image_size' => [
+						'title' => __( 'Max Image Size', 'responsive-lightbox' ),
+						'section' => 'responsive_lightbox_remote_library',
+						'type' => 'number',
+						'min' => 1,
+						'description' => __( 'Maximum allowed image size for remote downloads.', 'responsive-lightbox' ),
+						'append' => __( 'MB', 'responsive-lightbox' )
+					],
 					'caching' => [
 						'title' => __( 'Caching', 'responsive-lightbox' ),
 						'section' => 'responsive_lightbox_remote_library',

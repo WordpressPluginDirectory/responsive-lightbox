@@ -2,9 +2,9 @@
 Contributors: dfactory
 Donate link: http://www.dfactory.co/
 Tags: gallery, galleries, lightbox, image, images
-Requires at least: 5.0
-Tested up to: 6.8.2
-Stable tag: 2.5.3
+Requires at least: 6.0
+Tested up to: 6.9
+Stable tag: 2.5.5
 Requires PHP: 5.6
 License: MIT License
 License URI: http://opensource.org/licenses/MIT
@@ -140,8 +140,18 @@ Responsive Lightbox and Gallery plugin comes with many styles and effects alread
 
 == Changelog ==
 
+= 2.5.5 =
+* Security: Hardened Remote Library requests with capability + nonce checks and added a configurable max download size to block oversized images.
+* Security: Sanitized folder taxonomy loading and fixed a typo that could break the old-taxonomies AJAX call.
+* Tweak: Added explicit block editor dependencies to ensure scripts load reliably on widgets/customizer screens.
+
+= 2.5.4 =
+* Fix: SSFR vulnerability related to the 'get_image_size_by_url' function
+* Tweak: Modernized build process with Dart Sass and updated dependencies
+
 = 2.5.3 =
 * Fix: Potential XSS vulnerability related to lightbox link handling
+* Tweak: Refactor lightbox link handling to use DOMDocument
 
 = 2.5.2 =
 * Fix: XSS vulnerability related to Swipebox lightbox
@@ -562,5 +572,5 @@ Initial release
 
 == Upgrade Notice ==
 
-= 2.5.3 =
-Fix potential XSS vulnerability related to lightbox link handling
+= 2.5.5 =
+Hardened Remote Library requests, updated dependencies for security, improved Gutenberg blocks, and WordPress 6.9 compatibility

@@ -480,7 +480,8 @@
 					media_provider: provider,
 					media_search: phrase,
 					media_page: page,
-					response_data: response_data
+					response_data: response_data,
+					nonce: rlRemoteLibraryMedia.queryNonce
 				} ).done( function( response ) {
 					// valid request hash?
 					if ( RLWPMediaViewMediaFramePost.requestHash === 'provider:' + provider + '|phrase:' + phrase )

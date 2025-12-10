@@ -89,6 +89,9 @@ class Responsive_Lightbox_Folders {
 		if ( ! ctype_alnum( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'rl-folders-ajax-taxonomies-nonce' ) )
 			wp_send_json_error();
 
+		// validate taxonomies are strings
+		$taxonomies_input = array_filter( $_POST['taxonomies'], 'is_string' );
+
 		// get all possible (current and previous) taxonomies
 		$fields = $this->get_taxonomies();
 
@@ -103,7 +106,7 @@ class Responsive_Lightbox_Folders {
 				unset( $fields[$key] );
 
 			// sanitize taxonomies
-			$taxonomies = array_map( 'santize_key', $_POST['taxonomies'] );
+			$taxonomies = array_map( 'sanitize_key', $taxonomies_input );
 
 			foreach ( $taxonomies as $taxonomy ) {
 				// remove available taxonomy

@@ -2,7 +2,7 @@
 /*
 Plugin Name: Responsive Lightbox & Gallery
 Description: Responsive Lightbox & Gallery allows users to create galleries and view larger versions of images, galleries and videos in a lightbox (overlay) effect optimized for mobile devices.
-Version: 2.5.3
+Version: 2.5.5
 Author: dFactory
 Author URI: http://www.dfactory.co/
 Plugin URI: http://www.dfactory.co/products/responsive-lightbox/
@@ -44,7 +44,7 @@ include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'fun
  * Responsive Lightbox class.
  *
  * @class Responsive_Lightbox
- * @version	2.5.3
+ * @version	2.5.5
  */
 class Responsive_Lightbox {
 
@@ -180,6 +180,7 @@ class Responsive_Lightbox {
 		],
 		'remote_library' => [
 			'active'		=> true,
+			'max_image_size'	=> 10,
 			'caching'		=> false,
 			'cache_expiry'	=> 1,
 			'flickr'		=> [
@@ -270,7 +271,7 @@ class Responsive_Lightbox {
 			'origin_left'		=> true,
 			'origin_top'		=> true
 		],
-		'version' => '2.5.3',
+		'version' => '2.5.5',
 		'activation_date' => ''
 	];
 	public $options = [];
@@ -1764,7 +1765,7 @@ class Responsive_Lightbox {
 		global $pagenow;
 
 		// block editor dependencies
-		$dependencies = [ 'wp-blocks', 'wp-i18n', 'wp-element', 'wp-components' ];
+		$dependencies = [ 'wp-blocks', 'wp-i18n', 'wp-element', 'wp-components', 'wp-data', 'wp-block-editor' ];
 
 		// widgets page?
 		if ( $pagenow === 'widgets.php' )

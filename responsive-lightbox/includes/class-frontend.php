@@ -1529,39 +1529,55 @@ class Responsive_Lightbox_Frontend {
 	 * @return array
 	 */
 	public function get_image_size_by_url( $url ) {
-		// parse url
-		$url = ! empty( $url ) ? esc_url_raw( $url ) : '';
 		$size = [ 0, 0 ];
+		$sanitized_url = $this->sanitize_remote_image_url( $url );
 
-		if ( ! empty( $url ) ) {
-			// get cached data
-			$image_sizes = get_transient( 'rl-image_sizes_by_url' );
+		if ( empty( $sanitized_url ) )
+			return (array) apply_filters( 'rl_get_image_size_by_url', $size, $sanitized_url );
 
-			// cached url not found?
-			if ( $image_sizes === false || ! in_array( $url, array_keys( $image_sizes ) ) || empty( $image_sizes[$url] ) ) {
-				if ( class_exists( 'Responsive_Lightbox_Fast_Image' ) ) {
-					// loading image
-					$image = new Responsive_Lightbox_Fast_Image( $url );
+		$url = $sanitized_url;
 
-					// get size
-					$size = $image->get_size();
-				} else {
-					// get size using php
-					$size = getimagesize( $url );
-				}
+		$image_sizes = get_transient( 'rl-image_sizes_by_url' );
 
-				// set the cache expiration, 24 hours by default
-				$expire = absint( apply_filters( 'rl_object_cache_expire', DAY_IN_SECONDS ) );
+		if ( ! is_array( $image_sizes ) )
+			$image_sizes = [];
 
+		if ( isset( $image_sizes[$url] ) && is_array( $image_sizes[$url] ) ) {
+			$size = array_map( 'absint', $image_sizes[$url] );
+		} else {
+			$size = $this->remote_image_size_lookup( $url );
+
+			if ( $size[0] > 0 && $size[1] > 0 ) {
 				$image_sizes[$url] = $size;
-
+				$expire = absint( apply_filters( 'rl_object_cache_expire', DAY_IN_SECONDS ) );
 				set_transient( 'rl-image_sizes_by_url', $image_sizes, $expire );
-			// cached url found
-			} elseif ( ! empty( $image_sizes[$url] ) )
-				$size = array_map( 'absint', $image_sizes[$url] );
+			}
 		}
 
 		return (array) apply_filters( 'rl_get_image_size_by_url', $size, $url );
+	}
+
+	/**
+	 * Sanitize and validate a remote image URL.
+	 *
+	 * @param string $url
+	 * @return string
+	 */
+	public function sanitize_remote_image_url( $url ) {
+		$url = ! empty( $url ) ? esc_url_raw( $url ) : '';
+
+		if ( empty( $url ) )
+			return '';
+
+		$validated_url = wp_http_validate_url( $url );
+
+		if ( ! $validated_url )
+			return '';
+
+		$is_allowed = $this->is_remote_image_url_allowed( $validated_url );
+		$is_allowed = apply_filters( 'rl_is_remote_image_url_allowed', $is_allowed, $validated_url );
+
+		return $is_allowed ? $validated_url : '';
 	}
 
 	/**
@@ -2599,5 +2615,186 @@ class Responsive_Lightbox_Frontend {
 		// load style data?
 		if ( ! empty( $this->style_data['basicmasonry'] ) )
 			wp_add_inline_style( 'responsive-lightbox-basicmasonry-gallery', $this->style_data['basicmasonry'] );
+	}
+
+	/**
+	 * Fetch remote image dimensions safely.
+	 *
+	 * @param string $url
+	 * @return array
+	 */
+	private function remote_image_size_lookup( $url ) {
+		$args = [
+			'timeout'             => 5,
+			'redirection'         => 0,
+			'reject_unsafe_urls'  => true,
+			'limit_response_size' => 1048576,
+			'headers'             => [ 'Accept' => 'image/*' ]
+		];
+
+		$args = apply_filters( 'rl_remote_image_request_args', $args, $url );
+		$max_redirects = absint( apply_filters( 'rl_remote_image_max_redirects', 3, $url ) );
+		$current_url = $url;
+
+		for ( $redirects = 0; $redirects <= $max_redirects; $redirects++ ) {
+			$response = wp_safe_remote_get( $current_url, $args );
+
+			if ( is_wp_error( $response ) )
+				return [ 0, 0 ];
+
+			$status = wp_remote_retrieve_response_code( $response );
+
+			if ( in_array( $status, [ 301, 302, 303, 307, 308 ], true ) ) {
+				$location = wp_remote_retrieve_header( $response, 'location' );
+
+				if ( empty( $location ) )
+					return [ 0, 0 ];
+
+				if ( class_exists( 'WP_Http' ) )
+					$location = WP_Http::make_absolute_url( $location, $current_url );
+
+				$next_url = $this->sanitize_remote_image_url( $location );
+
+				if ( empty( $next_url ) )
+					return [ 0, 0 ];
+
+				$current_url = $next_url;
+				continue;
+			}
+
+			if ( $status < 200 || $status >= 300 )
+				return [ 0, 0 ];
+
+			$body = wp_remote_retrieve_body( $response );
+
+			if ( empty( $body ) )
+				return [ 0, 0 ];
+
+			$dimensions = @getimagesizefromstring( $body );
+
+			if ( is_array( $dimensions ) && isset( $dimensions[0], $dimensions[1] ) )
+				return [ absint( $dimensions[0] ), absint( $dimensions[1] ) ];
+
+			return [ 0, 0 ];
+		}
+
+		return [ 0, 0 ];
+	}
+
+	/**
+	 * Ensure the remote URL points to an allowed host.
+	 *
+	 * @param string $url
+	 * @return bool
+	 */
+	private function is_remote_image_url_allowed( $url ) {
+		$parts = wp_parse_url( $url );
+
+		if ( empty( $parts['host'] ) )
+			return false;
+
+		$host = strtolower( trim( $parts['host'], '[]' ) );
+
+		if ( in_array( $host, [ 'localhost', 'localhost.localdomain' ], true ) )
+			return false;
+
+		if ( function_exists( 'idn_to_ascii' ) ) {
+			$converted = defined( 'INTL_IDNA_VARIANT_UTS46' ) ? idn_to_ascii( $host, 0, INTL_IDNA_VARIANT_UTS46 ) : idn_to_ascii( $host );
+
+			if ( ! empty( $converted ) )
+				$host = strtolower( $converted );
+		}
+
+		$ips = $this->resolve_host_ips( $host );
+
+		if ( empty( $ips ) )
+			return false;
+
+		foreach ( $ips as $ip ) {
+			if ( $this->is_blocked_ip( $ip ) )
+				return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Resolve host into a list of IP addresses.
+	 *
+	 * @param string $host
+	 * @return array
+	 */
+	private function resolve_host_ips( $host ) {
+		$host = trim( $host );
+
+		if ( $host === '' )
+			return [];
+
+		if ( filter_var( $host, FILTER_VALIDATE_IP ) )
+			return [ $host ];
+
+		$ips = [];
+
+		if ( function_exists( 'dns_get_record' ) && defined( 'DNS_A' ) ) {
+			$dns_types = defined( 'DNS_A' ) ? DNS_A : 0;
+
+			if ( defined( 'DNS_AAAA' ) )
+				$dns_types |= DNS_AAAA;
+
+			if ( $dns_types > 0 ) {
+				$records = @dns_get_record( $host, $dns_types );
+
+				if ( is_array( $records ) ) {
+					foreach ( $records as $record ) {
+						if ( ! empty( $record['ip'] ) )
+							$ips[] = $record['ip'];
+						elseif ( ! empty( $record['ipv6'] ) )
+							$ips[] = $record['ipv6'];
+					}
+				}
+			}
+		}
+
+		if ( empty( $ips ) && function_exists( 'gethostbynamel' ) ) {
+			$resolved = @gethostbynamel( $host );
+
+			if ( ! empty( $resolved ) )
+				$ips = array_merge( $ips, $resolved );
+		}
+
+		return array_unique( array_filter( $ips ) );
+	}
+
+	/**
+	 * Check if an IP address belongs to a blocked range.
+	 *
+	 * @param string $ip
+	 * @return bool
+	 */
+	private function is_blocked_ip( $ip ) {
+		$ip = trim( $ip );
+
+		if ( $ip === '' )
+			return true;
+
+		if ( strpos( $ip, '%' ) !== false )
+			list( $ip ) = explode( '%', $ip );
+
+		$flags = FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE;
+
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, $flags ) === false )
+			return true;
+
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			if ( preg_match( '/^(169\.254\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/', $ip ) )
+				return true;
+		} elseif ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+			$normalized = strtolower( $ip );
+
+			if ( $normalized === '::1' || strpos( $normalized, 'fe80:' ) === 0 )
+				return true;
+		}
+
+		return false;
 	}
 }
