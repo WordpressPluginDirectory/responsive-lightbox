@@ -4,7 +4,7 @@ Donate link: http://www.dfactory.co/
 Tags: gallery, galleries, lightbox, image, images
 Requires at least: 6.0
 Tested up to: 6.9
-Stable tag: 2.5.5
+Stable tag: 2.6.0
 Requires PHP: 5.6
 License: MIT License
 License URI: http://opensource.org/licenses/MIT
@@ -15,7 +15,7 @@ The most popular lightbox plugin and responsive gallery builder for WordPress.
 
 = Everything You Need in a WordPress Gallery Plugin =
 
-<a href="http://www.dfactory.co/products/responsive-lightbox/?utm_source=repo&utm_medium=link&utm_campaign=responsive-lightbox-plugin-free">Responsive Lightbox and Gallery plugin</a> is a fully fledged WordPress gallery plugin with a powerful Drag & Drop Gallery Builder and Lightbox functionality that's used daily by more than 300,000 active users and downloaded over 3 Million times.
+<a href="http://www.dfactory.co/products/responsive-lightbox/?utm_source=repo&utm_medium=link&utm_campaign=responsive-lightbox-plugin-free">Responsive Lightbox and Gallery plugin</a> is a fully fledged WordPress gallery plugin with a powerful Drag & Drop Gallery Builder and Lightbox functionality that's used daily by more than 100,000 active users and downloaded over 3 Million times.
 
 The beauty of it is how easy it is for you to customize it and enhance its features thanks to <a href="?utm_source=repo&utm_medium=link&utm_campaign=responsive-lightbox-plugin-free">free and premium extensions</a>. 
 
@@ -39,41 +39,41 @@ Looking to provide a premium experience to your visitors? Responsive Lightbox an
 
 Need more reasons? <a href="http://www.dfactory.co/products/responsive-lightbox/?utm_source=repo&utm_medium=link&utm_campaign=responsive-lightbox-plugin-free">Check them out here</a>!
 
-= What some of our 300,000+ active users say about Responsive Lightbox and Gallery plugin =
+= What some of our 100,000+ active users say about Responsive Lightbox and Gallery plugin =
 
->Amazing Gallery plugin!
+* Amazing Gallery plugin!
 
->Versatile and powerful for both sliders and galleries, many features and style options.
+* Versatile and powerful for both sliders and galleries, many features and style options.
 
->Really easy to use. Takes all the fiddling out of the process of creating a responsive gallery/lightbox.
+* Really easy to use. Takes all the fiddling out of the process of creating a responsive gallery/lightbox.
 
->I needed a lightbox plugin that works reliably. This marvelous plugin does the magic. Now I can spend more on my photography and less time customizing WordPress.
+* I needed a lightbox plugin that works reliably. This marvelous plugin does the magic. Now I can spend more on my photography and less time customizing WordPress.
 
->This plugin is quite flexible and effective. The functionality choices are broad and all quite easy to configure.
+* This plugin is quite flexible and effective. The functionality choices are broad and all quite easy to configure.
 
 = Need more galley options? =
 
 Responsive Lightbox and Gallery plugin can be extended with our <a href="?utm_source=repo&utm_medium=link&utm_campaign=responsive-lightbox-plugin-free">premium extensions</a>:
 
 <strong>Premium Extensions:</strong>
-> [Photo & Art bundle](http://www.dfactory.co/products/photo-art-bundle/)
-> [Justified Gallery](http://www.dfactory.co/products/justified-gallery/)
-> [Expander Gallery](http://www.dfactory.co/products/expander-gallery/)
-> [Hidden Gallery](http://www.dfactory.co/products/hidden-gallery/)
-> [Masonry Image Gallery](http://www.dfactory.co/products/masonry-gallery-pro/)
-> [Slider Gallery](http://www.dfactory.co/products/slider-gallery/)
-> [Lightcase Lightbox](http://www.dfactory.co/products/lightcase-lightbox/)
-> [PhotoSwipe Lightbox](http://www.dfactory.co/products/photoswipe-lightbox/)
-> [Lightgallery Lightbox](http://www.dfactory.co/products/lightgallery-lightbox/)
-> [Strip Lightbox](http://www.dfactory.co/products/strip-lightbox/)
-> [Fancybox Pro](http://www.dfactory.co/products/fancybox-pro/)
-> [Lightbox Comments](http://www.dfactory.co/products/lightbox-comments/)
+* [Photo & Art bundle](http://www.dfactory.co/products/photo-art-bundle/)
+* [Justified Gallery](http://www.dfactory.co/products/justified-gallery/)
+* [Expander Gallery](http://www.dfactory.co/products/expander-gallery/)
+* [Hidden Gallery](http://www.dfactory.co/products/hidden-gallery/)
+* [Masonry Image Gallery](http://www.dfactory.co/products/masonry-gallery-pro/)
+* [Slider Gallery](http://www.dfactory.co/products/slider-gallery/)
+* [Lightcase Lightbox](http://www.dfactory.co/products/lightcase-lightbox/)
+* [PhotoSwipe Lightbox](http://www.dfactory.co/products/photoswipe-lightbox/)
+* [Lightgallery Lightbox](http://www.dfactory.co/products/lightgallery-lightbox/)
+* [Strip Lightbox](http://www.dfactory.co/products/strip-lightbox/)
+* [Fancybox Pro](http://www.dfactory.co/products/fancybox-pro/)
+* [Lightbox Comments](http://www.dfactory.co/products/lightbox-comments/)
 
 = Full Feature List =
 
 * Powerful and easy-to-use gallery builder
 * 3 beautiful gallery templates - Grid, Slider and Masonry
-* 7 responsive lightbox scripts (SwipeBox, prettyPhoto, Nivo Lightbox, Image Lightbox, Tos "R" Us, Featherlight, Magnific Popup)
+* 8 responsive lightbox scripts (SwipeBox, prettyPhoto, Nivo Lightbox, Image Lightbox, Tos "R" Us, Featherlight, Magnific Popup, GLightbox)
 * Create galleries from Media Library or Post attached images
 * Media Folders with a drag & drop interface
 * Access to millions of images through Remote Library
@@ -139,6 +139,14 @@ Responsive Lightbox and Gallery plugin comes with many styles and effects alread
 2. screenshot-2.jpg
 
 == Changelog ==
+
+= 2.6.0 =
+* New: GLightbox script support - Added modern, lightweight GLightbox as a new lightbox option
+* New: WebP image format support across all lightbox scripts
+* Security: Comprehensive security hardening for all lightbox scripts (XSS prevention, content sanitization)
+* Security: Implemented DOMPurify for enhanced JavaScript content sanitization
+* Tweak: prettyPhoto improvements - hardened content handling, fixed media cases, improved thumbnail display
+* Tweak: Updated all third-party assets and dependencies for better security and performance
 
 = 2.5.5 =
 * Security: Hardened Remote Library requests with capability + nonce checks and added a configurable max download size to block oversized images.
@@ -572,5 +580,5 @@ Initial release
 
 == Upgrade Notice ==
 
-= 2.5.5 =
-Hardened Remote Library requests, updated dependencies for security, improved Gutenberg blocks, and WordPress 6.9 compatibility
+= 2.6.0 =
+New GLightbox script support, comprehensive security hardening, WebP format support, DOMPurify implementation, and updated third-party assets

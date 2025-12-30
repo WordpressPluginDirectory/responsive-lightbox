@@ -177,7 +177,7 @@ class Responsive_Lightbox_Frontend {
 		}
 
 		// videos
-		if ( $args['settings']['plugin']['videos'] ) {
+		if ( $args['settings']['plugin']['videos'] && rl_current_lightbox_supports( 'video' ) ) {
 			// search for video links
 			preg_match_all('/<a([^>]*?)href=(?:\'|")((http|https)(?::\/\/|)(?:(?:(?:youtu\.be\/|(?:www\.)?youtube\.com\/)(?:embed\/|v\/|watch\?v=)?([\w-]{11})(?:\?)?([a-z0-9;:@#&%=+\/\$_.-]*))|(?:(?:www\.)?vimeo\.com\/([0-9]+)(?:\?)?([a-z0-9;:@#&%=+\/\$_.-]*))))(?:\'|")(.*?)>(.*?)<\/a>/i', $content, $links );
 

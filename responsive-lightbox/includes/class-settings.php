@@ -82,13 +82,34 @@ class Responsive_Lightbox_Settings {
 		$this->scripts = apply_filters(
 			'rl_settings_scripts',
 			[
-				'swipebox'		 =>  [
-					'name'		 => __( 'SwipeBox', 'responsive-lightbox' ),
-					'animations' => [
-						'css'	 => __( 'CSS', 'responsive-lightbox' ),
-						'jquery' => __( 'jQuery', 'responsive-lightbox' )
+				'featherlight'	=> [
+					'name'		=> __( 'Featherlight', 'responsive-lightbox' ),
+					'supports'	=> [ 'inline', 'iframe', 'ajax' ]
+				],
+				'glightbox'	 	=> [
+					'name'		=> __( 'GLightbox', 'responsive-lightbox' ),
+					'supports'	=> [ 'title', 'caption', 'html_caption' ]
+				],
+				'imagelightbox'	=> [
+					'name'		=> __( 'Image Lightbox', 'responsive-lightbox' ),
+					'supports'	=> []
+				],
+				'magnific'	 	=> [
+					'name'		=> __( 'Magnific Popup', 'responsive-lightbox' ),
+					'supports'	=> [ 'inline', 'iframe', 'ajax', 'title', 'caption' ]
+				],
+				'nivo'			=> [
+					'name'		=> __( 'Nivo Lightbox', 'responsive-lightbox' ),
+					'effects'	=> [
+						'fade'		 => __( 'fade', 'responsive-lightbox' ),
+						'fadeScale'	 => __( 'fade scale', 'responsive-lightbox' ),
+						'slideLeft'	 => __( 'slide left', 'responsive-lightbox' ),
+						'slideRight' => __( 'slide right', 'responsive-lightbox' ),
+						'slideUp'	 => __( 'slide up', 'responsive-lightbox' ),
+						'slideDown'	 => __( 'slide down', 'responsive-lightbox' ),
+						'fall'		 => __( 'fall', 'responsive-lightbox' )
 					],
-					'supports'	=> [ 'title' ]
+					'supports'	=> [ 'inline', 'iframe', 'ajax', 'title' ]
 				],
 				'prettyphoto'	 =>  [
 					'name'				 => __( 'prettyPhoto', 'responsive-lightbox' ),
@@ -114,34 +135,17 @@ class Responsive_Lightbox_Settings {
 					],
 					'supports'	=> [ 'inline', 'iframe', 'ajax', 'title', 'caption' ]
 				],
-				'nivo'			=> [
-					'name'		=> __( 'Nivo Lightbox', 'responsive-lightbox' ),
-					'effects'	=> [
-						'fade'		 => __( 'fade', 'responsive-lightbox' ),
-						'fadeScale'	 => __( 'fade scale', 'responsive-lightbox' ),
-						'slideLeft'	 => __( 'slide left', 'responsive-lightbox' ),
-						'slideRight' => __( 'slide right', 'responsive-lightbox' ),
-						'slideUp'	 => __( 'slide up', 'responsive-lightbox' ),
-						'slideDown'	 => __( 'slide down', 'responsive-lightbox' ),
-						'fall'		 => __( 'fall', 'responsive-lightbox' )
+				'swipebox'		 =>  [
+					'name'		 => __( 'SwipeBox', 'responsive-lightbox' ),
+					'animations' => [
+						'css'	 => __( 'CSS', 'responsive-lightbox' ),
+						'jquery' => __( 'jQuery', 'responsive-lightbox' )
 					],
-					'supports'	=> [ 'inline', 'iframe', 'ajax', 'title' ]
-				],
-				'imagelightbox'	=> [
-					'name'		=> __( 'Image Lightbox', 'responsive-lightbox' ),
-					'supports'	=> []
+					'supports'	=> [ 'title' ]
 				],
 				'tosrus'		=> [
 					'name'		=> __( 'TosRUs', 'responsive-lightbox' ),
 					'supports'	=> [ 'inline', 'title' ]
-				],
-				'featherlight'	=> [
-					'name'		=> __( 'Featherlight', 'responsive-lightbox' ),
-					'supports'	=> [ 'inline', 'iframe', 'ajax' ]
-				],
-				'magnific'	 	=> [
-					'name'		=> __( 'Magnific Popup', 'responsive-lightbox' ),
-					'supports'	=> [ 'inline', 'iframe', 'ajax', 'title', 'caption' ]
 				]
 			]
 		);
@@ -1519,6 +1523,67 @@ class Responsive_Lightbox_Settings {
 						'type' => 'boolean',
 						'label' => __( 'If set to true last focused element before popup showup will be focused after popup close.', 'responsive-lightbox' ),
 						'parent' => 'magnific'
+					]
+				];
+				break;
+
+			case 'glightbox':
+				$this->settings['configuration']['prefix'] = 'rl_gl';
+				$this->settings['configuration']['fields'] = [
+					'slide_effect' => [
+						'title' => __( 'Slide effect', 'responsive-lightbox' ),
+						'section' => 'responsive_lightbox_configuration',
+						'type' => 'select',
+						'description' => __( 'Select the slide effect.', 'responsive-lightbox' ),
+						'options' => [
+							'slide' => __( 'Slide', 'responsive-lightbox' ),
+							'fade' => __( 'Fade', 'responsive-lightbox' ),
+							'zoom' => __( 'Zoom', 'responsive-lightbox' ),
+							'none' => __( 'None', 'responsive-lightbox' )
+						],
+						'parent' => 'glightbox'
+					],
+					'close_button' => [
+						'title' => __( 'Close button', 'responsive-lightbox' ),
+						'section' => 'responsive_lightbox_configuration',
+						'type' => 'boolean',
+						'label' => __( 'Display the close button.', 'responsive-lightbox' ),
+						'parent' => 'glightbox'
+					],
+					'touch_navigation' => [
+						'title' => __( 'Touch navigation', 'responsive-lightbox' ),
+						'section' => 'responsive_lightbox_configuration',
+						'type' => 'boolean',
+						'label' => __( 'Enable touch navigation.', 'responsive-lightbox' ),
+						'parent' => 'glightbox'
+					],
+					'keyboard_navigation' => [
+						'title' => __( 'Keyboard navigation', 'responsive-lightbox' ),
+						'section' => 'responsive_lightbox_configuration',
+						'type' => 'boolean',
+						'label' => __( 'Enable keyboard navigation.', 'responsive-lightbox' ),
+						'parent' => 'glightbox'
+					],
+					'close_on_outside_click' => [
+						'title' => __( 'Close on outside click', 'responsive-lightbox' ),
+						'section' => 'responsive_lightbox_configuration',
+						'type' => 'boolean',
+						'label' => __( 'Close the lightbox when clicking outside of the content.', 'responsive-lightbox' ),
+						'parent' => 'glightbox'
+					],
+					'loop' => [
+						'title' => __( 'Loop', 'responsive-lightbox' ),
+						'section' => 'responsive_lightbox_configuration',
+						'type' => 'boolean',
+						'label' => __( 'Enable loop.', 'responsive-lightbox' ),
+						'parent' => 'glightbox'
+					],
+					'zoomable' => [
+						'title' => __( 'Zoomable', 'responsive-lightbox' ),
+						'section' => 'responsive_lightbox_configuration',
+						'type' => 'boolean',
+						'label' => __( 'Enable zoomable images.', 'responsive-lightbox' ),
+						'parent' => 'glightbox'
 					]
 				];
 				break;
