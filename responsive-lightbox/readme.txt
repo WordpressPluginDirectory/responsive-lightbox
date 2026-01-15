@@ -4,7 +4,7 @@ Donate link: http://www.dfactory.co/
 Tags: gallery, galleries, lightbox, image, images
 Requires at least: 6.0
 Tested up to: 6.9
-Stable tag: 2.6.0
+Stable tag: 2.6.1
 Requires PHP: 5.6
 License: MIT License
 License URI: http://opensource.org/licenses/MIT
@@ -139,6 +139,10 @@ Responsive Lightbox and Gallery plugin comes with many styles and effects alread
 2. screenshot-2.jpg
 
 == Changelog ==
+
+= 2.6.1 =
+* Security: Fix potential XSS vulnerability in comment lightbox content
+* Security: Update DOMPurify to 3.3.1 to fix known XSS vulnerability
 
 = 2.6.0 =
 * New: GLightbox script support - Added modern, lightweight GLightbox as a new lightbox option
@@ -580,5 +584,5 @@ Initial release
 
 == Upgrade Notice ==
 
-= 2.6.0 =
-New GLightbox script support, comprehensive security hardening, WebP format support, DOMPurify implementation, and updated third-party assets
+= 2.6.1 =
+Fix potential XSS vulnerabilities in comment lightbox content and DOMPurify library

@@ -2,7 +2,7 @@
 /*
 Plugin Name: Responsive Lightbox & Gallery
 Description: Responsive Lightbox & Gallery allows users to create galleries and view larger versions of images, galleries and videos in a lightbox (overlay) effect optimized for mobile devices.
-Version: 2.6.0
+Version: 2.6.1
 Author: dFactory
 Author URI: http://www.dfactory.co/
 Plugin URI: http://www.dfactory.co/products/responsive-lightbox/
@@ -12,7 +12,7 @@ Text Domain: responsive-lightbox
 Domain Path: /languages
 
 Responsive Lightbox & Gallery
-Copyright (C) 2013-2025, Digital Factory - info@digitalfactory.pl
+Copyright (C) 2013-2026, Digital Factory - info@digitalfactory.pl
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -44,7 +44,7 @@ include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'fun
  * Responsive Lightbox class.
  *
  * @class Responsive_Lightbox
- * @version	2.6.0
+ * @version	2.6.1
  */
 class Responsive_Lightbox {
 
@@ -280,7 +280,7 @@ class Responsive_Lightbox {
 			'origin_left'		=> true,
 			'origin_top'		=> true
 		],
-		'version' => '2.6.0',
+		'version' => '2.6.1',
 		'activation_date' => ''
 	];
 	public $options = [];
@@ -2090,7 +2090,7 @@ class Responsive_Lightbox {
 			wp_register_script( 'responsive-lightbox-infinite-scroll', RESPONSIVE_LIGHTBOX_URL . '/assets/infinitescroll/infinite-scroll.pkgd' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', [ 'jquery' ], '4.0.1' );
 
 			if ( ! wp_script_is( 'dompurify', 'registered' ) ) {
-				wp_register_script( 'dompurify', plugins_url( 'assets/dompurify/purify.min.js', __FILE__ ), [], '3.1.7', $this->options['settings']['loading_place'] === 'footer' );
+				wp_register_script( 'dompurify', plugins_url( 'assets/dompurify/purify.min.js', __FILE__ ), [], '3.3.1', $this->options['settings']['loading_place'] === 'footer' );
 			}
 
 			wp_register_script( 'responsive-lightbox-sanitizer', plugins_url( 'js/sanitizer.js', __FILE__ ), [ 'dompurify' ], $this->defaults['version'], $this->options['settings']['loading_place'] === 'footer' );
