@@ -2,7 +2,7 @@
 /*
 Plugin Name: Responsive Lightbox & Gallery
 Description: Responsive Lightbox & Gallery allows users to create galleries and view larger versions of images, galleries and videos in a lightbox (overlay) effect optimized for mobile devices.
-Version: 2.6.1
+Version: 2.7.1
 Author: dFactory
 Author URI: http://www.dfactory.co/
 Plugin URI: http://www.dfactory.co/products/responsive-lightbox/
@@ -34,6 +34,7 @@ include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'cla
 include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'class-galleries.php' );
 include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'class-folders.php' );
 include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'class-frontend.php' );
+include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'class-settings-data.php' );
 include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'class-settings.php' );
 include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'class-tour.php' );
 include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'class-welcome.php' );
@@ -44,7 +45,7 @@ include_once( RESPONSIVE_LIGHTBOX_PATH . 'includes' . DIRECTORY_SEPARATOR . 'fun
  * Responsive Lightbox class.
  *
  * @class Responsive_Lightbox
- * @version	2.6.1
+ * @version	2.7.1
  */
 class Responsive_Lightbox {
 
@@ -181,7 +182,10 @@ class Responsive_Lightbox {
 		],
 		'folders' => [
 			'active'			=> true,
+			'folders_source'	=> 'rl_media_folder',
 			'media_taxonomy'	=> 'rl_media_folder',
+			'custom_taxonomies'	=> [],
+			'media_ui'			=> true,
 			'media_tags'		=> false,
 			'jstree_wholerow'	=> true,
 			'show_in_menu'		=> false,
@@ -251,7 +255,7 @@ class Responsive_Lightbox {
 			'columns_sm'		=> 2,
 			'columns_xs'		=> 1,
 			'gutter'			=> 2,
-			'force_height'		=> false,
+			'force_height'		=> true,
 			'row_height'		=> 150
 		],
 		'basicslider_gallery' => [
@@ -280,7 +284,7 @@ class Responsive_Lightbox {
 			'origin_left'		=> true,
 			'origin_top'		=> true
 		],
-		'version' => '2.6.1',
+		'version' => '2.7.1',
 		'activation_date' => ''
 	];
 	public $options = [];
@@ -314,6 +318,8 @@ class Responsive_Lightbox {
 	public $multilang;
 	public $remote_library;
 	public $settings;
+	public $settings_api;
+	public $gallery_api;
 
 	/**
 	 * Class constructor.
@@ -350,7 +356,18 @@ class Responsive_Lightbox {
 			$capabilities = [];
 
 		$this->options['settings'] = array_merge( $this->defaults['settings'], ( ( $array = get_option( 'responsive_lightbox_settings' ) ) === false ? [] : $array ) );
-		$this->options['folders'] = array_merge( $this->defaults['folders'], ( ( $array = get_option( 'responsive_lightbox_folders' ) ) === false ? [] : $array ) );
+		
+		// load folders options with migration check
+		$raw_folders = get_option( 'responsive_lightbox_folders', false );
+		$raw_folders = $raw_folders === false ? [] : $raw_folders;
+		$this->options['folders'] = array_merge( $this->defaults['folders'], $raw_folders );
+		
+		// migrate existing users: detect if they're using custom taxonomy
+		if ( ! isset( $raw_folders['folders_source'] ) && isset( $raw_folders['media_taxonomy'] ) && $raw_folders['media_taxonomy'] !== 'rl_media_folder' ) {
+			$this->options['folders']['folders_source'] = 'custom_taxonomy';
+			update_option( 'responsive_lightbox_folders', $this->options['folders'] );
+		}
+		
 		$this->options['builder'] = array_merge( $this->defaults['builder'], ( ( $array = get_option( 'responsive_lightbox_builder' ) ) === false ? [] : $array ) );
 		$this->options['capabilities'] = array_merge( $this->defaults['capabilities'], $capabilities );
 		$this->options['remote_library'] = array_merge( $this->defaults['remote_library'], ( ( $array = get_option( 'responsive_lightbox_remote_library' ) ) === false ? [] : $array ) );
@@ -370,6 +387,9 @@ class Responsive_Lightbox {
 		// set current lightbox script
 		$this->current_script = $this->options['settings']['script'];
 
+		// initialize folders class early
+		$this->folders = new Responsive_Lightbox_Folders( $this );
+
 		// actions
 		add_action( 'upgrader_process_complete', [ $this, 'update_plugin' ], 10, 2 );
 		add_action( 'plugins_loaded', [ $this, 'plugins_loaded_init' ] );
@@ -377,7 +397,7 @@ class Responsive_Lightbox {
 		add_action( 'after_setup_theme', [ $this, 'init_remote_libraries' ], 11 );
 		add_action( 'init', [ $this, 'load_textdomain' ] );
 		add_action( 'init', [ $this, 'init_galleries' ] );
-		add_action( 'init', [ $this, 'init_folders' ] );
+		add_action( 'init', [ $this->folders, 'init_folders' ], 99 );
 		add_action( 'init', [ $this, 'init_gutenberg' ] );
 		add_action( 'admin_init', [ $this, 'update_notice' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'front_scripts_styles' ] );
@@ -971,7 +991,7 @@ class Responsive_Lightbox {
 		array_unshift( $links, sprintf( '<a href="%s">%s</a>', esc_url_raw( admin_url( 'admin.php' ) ) . '?page=responsive-lightbox-settings', esc_html__( 'Settings', 'responsive-lightbox' ) ) );
 
 		// add add-ons link
-		$links[] = sprintf( '<a href="%s" style="color: green;">%s</a>', esc_url_raw( admin_url( 'admin.php' ) ) . '?page=responsive-lightbox-addons', esc_html__( 'Add-ons', 'responsive-lightbox' ) );
+		$links[] = sprintf( '<a href="%s" style="color: #00a32a;">%s</a>', esc_url_raw( admin_url( 'admin.php' ) ) . '?page=responsive-lightbox-settings&tab=addons', esc_html__( 'Add-ons', 'responsive-lightbox' ) );
 
 		return $links;
 	}
@@ -1076,7 +1096,20 @@ class Responsive_Lightbox {
 	 * @return bool
 	 */
 	public function set_lightbox_script( $script ) {
-		if ( array_key_exists( $script, $this->settings->settings['settings']['fields']['script']['options'] ) ) {
+		$script_options = [];
+		if ( $this->settings && method_exists( $this->settings, 'get_setting_fields' ) ) {
+			$settings_fields = $this->settings->get_setting_fields( 'settings' );
+			if ( ! empty( $settings_fields['script']['options'] ) && is_array( $settings_fields['script']['options'] ) )
+				$script_options = $settings_fields['script']['options'];
+		}
+
+		if ( empty( $script_options ) ) {
+			$scripts = Responsive_Lightbox_Settings_Data::get_scripts();
+			if ( is_array( $scripts ) )
+				$script_options = array_combine( array_keys( $scripts ), array_keys( $scripts ) );
+		}
+
+		if ( is_array( $script_options ) && array_key_exists( $script, $script_options ) ) {
 			// set new lightbox script
 			$this->current_script = $script;
 
@@ -1288,15 +1321,51 @@ class Responsive_Lightbox {
 		$breadcrumbs = [];
 
 		// get page
-		$page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
+		$page_raw = isset( $_GET['page'] ) ? wp_unslash( $_GET['page'] ) : '';
+		$page_parts = $page_raw !== '' ? explode( '&', $page_raw, 2 ) : [ '' ];
+		$page = $page_parts[0] !== '' ? sanitize_key( $page_parts[0] ) : '';
+		$page_args = [];
 
-		// get tabs
-		$tabs = $this->settings->get_data( 'tabs' );
+		if ( ! empty( $page_parts[1] ) )
+			parse_str( $page_parts[1], $page_args );
 
-		// settings?
-		if ( $page && preg_match( '/^responsive-lightbox-(' . implode( '|', array_keys( $tabs ) ) . ')$/', $page, $found_tabs ) === 1 ) {
+		// get tabs from Settings API
+		$api_pages = $this->settings_api->get_pages();
+		$tabs = [];
+		
+		if ( isset( $api_pages['settings'], $api_pages['settings']['tabs'] ) ) {
+			foreach ( $api_pages['settings']['tabs'] as $tab_id => $tab_data ) {
+				$tabs[$tab_id] = [
+					'name' => isset( $tab_data['label'] ) ? $tab_data['label'] : ucfirst( str_replace( '_', ' ', $tab_id ) ),
+					'default_section' => isset( $tab_data['default_subpage'] ) ? $tab_data['default_subpage'] : '',
+					'sections' => []
+				];
+				
+				// populate subpages as sections for gallery tab
+				if ( $tab_id === 'gallery' && isset( $tab_data['subpages'] ) ) {
+					foreach ( $tab_data['subpages'] as $subpage_id => $subpage_data ) {
+						$tabs[$tab_id]['sections'][$subpage_id] = isset( $subpage_data['label'] ) ? $subpage_data['label'] : ucfirst( str_replace( '_', ' ', $subpage_id ) );
+					}
+				}
+			}
+		}
+
+		$tab_key = '';
+		$section_key = '';
+
+		// settings (new routing)
+		if ( $page === 'responsive-lightbox-settings' ) {
+			$tab_key = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : ( isset( $page_args['tab'] ) ? sanitize_key( $page_args['tab'] ) : 'settings' );
+
+			if ( ! array_key_exists( $tab_key, $tabs ) )
+				$tab_key = 'settings';
+		// settings (legacy routing)
+		} elseif ( $page && preg_match( '/^responsive-lightbox-(' . implode( '|', array_keys( $tabs ) ) . ')$/', $page, $found_tabs ) === 1 ) {
 			$tab_key = isset( $found_tabs[1] ) ? $found_tabs[1] : 'settings';
-			$section_key = isset( $_GET['section'] ) ? sanitize_key( $_GET['section'] ) : ( ! empty( $tabs[$tab_key]['default_section'] ) ? $tabs[$tab_key]['default_section'] : '' );
+		}
+
+		if ( $tab_key ) {
+			$section_key = isset( $_GET['section'] ) ? sanitize_key( $_GET['section'] ) : ( isset( $page_args['section'] ) ? sanitize_key( $page_args['section'] ) : ( ! empty( $tabs[$tab_key]['default_section'] ) ? $tabs[$tab_key]['default_section'] : '' ) );
 
 			$breadcrumbs[] = [
 				'url'	=> admin_url( 'admin.php?page=responsive-lightbox-settings' ),
@@ -1305,12 +1374,12 @@ class Responsive_Lightbox {
 
 			if ( $tab_key === 'configuration' ) {
 				$breadcrumbs[] = [
-					'url'	=> admin_url( 'admin.php?page=responsive-lightbox-configuration' ),
+					'url'	=> admin_url( 'admin.php?page=responsive-lightbox-settings&tab=configuration' ),
 					'name'	=> $tabs[$tab_key]['name']
 				];
 
-				// get scripts
-				$scripts = $this->settings->get_data( 'scripts' );
+				// get scripts from helper
+				$scripts = Responsive_Lightbox_Settings_Data::get_scripts();
 
 				// valid lightbox script?
 				if ( array_key_exists( $section_key, $scripts ) ) {
@@ -1321,15 +1390,20 @@ class Responsive_Lightbox {
 				}
 			} elseif ( $tab_key === 'gallery' ) {
 				$breadcrumbs[] = [
-					'url'	=> admin_url( 'admin.php?page=responsive-lightbox-gallery' ),
+					'url'	=> admin_url( 'admin.php?page=responsive-lightbox-settings&tab=gallery' ),
 					'name'	=> $tabs[$tab_key]['name']
 				];
 
 				// valid gallery?
 				if ( array_key_exists( $section_key, $tabs['gallery']['sections'] ) ) {
+					$section_label = $tabs['gallery']['sections'][$section_key];
+					$default_suffix = ' ' . __( '(default)', 'responsive-lightbox' );
+					if ( substr( $section_label, -strlen( $default_suffix ) ) === $default_suffix )
+						$section_label = substr( $section_label, 0, -strlen( $default_suffix ) );
+
 					$breadcrumbs[] = [
 						'url'	=> '',
-						'name'	=> $tabs['gallery']['sections'][$section_key]
+						'name'	=> $section_label
 					];
 				}
 			} else {
@@ -1510,138 +1584,6 @@ class Responsive_Lightbox {
 	}
 
 	/**
-	 * Initialize folders.
-	 *
-	 * @return void
-	 */
-	public function init_folders() {
-		// initialize folder class
-		new Responsive_Lightbox_Folders( ! $this->options['folders']['active'] );
-
-		// end if in read only mode
-		if ( ! $this->options['folders']['active'] )
-			return;
-
-		// register media taxonomy
-		$this->register_media_taxonomy( 'rl_media_folder' );
-
-		// register media tags
-		if ( $this->options['folders']['media_tags'] ) {
-			register_taxonomy(
-				'rl_media_tag',
-				'attachment',
-				[
-					'public'				=> true,
-					'hierarchical'			=> false,
-					'labels'				=> [
-						'name'				=> _x( 'Media Tags', 'taxonomy general name', 'responsive-lightbox' ),
-						'singular_name'	=> _x( 'Media Tag', 'taxonomy singular name', 'responsive-lightbox' ),
-						'search_items'	=> __( 'Search Tags', 'responsive-lightbox' ),
-						'all_items'		=> __( 'All Tags', 'responsive-lightbox' ),
-						'edit_item'		=> __( 'Edit Tag', 'responsive-lightbox' ),
-						'update_item'	=> __( 'Update Tag', 'responsive-lightbox' ),
-						'add_new_item'	=> __( 'Add New Tag', 'responsive-lightbox' ),
-						'new_item_name'	=> __( 'New Tag Name', 'responsive-lightbox' ),
-						'not_found'		=> __( 'No tags found.', 'responsive-lightbox' ),
-						'menu_name'		=> _x( 'Tags', 'taxonomy general name', 'responsive-lightbox' ),
-					],
-					'show_ui'				=> true,
-					'show_in_menu'			=> $this->options['folders']['show_in_menu'],
-					'show_in_nav_menus'		=> false,
-					'show_in_quick_edit'	=> true,
-					'show_tagcloud'			=> false,
-					'show_admin_column'		=> $this->options['folders']['show_in_menu'],
-					'update_count_callback'	=> '_update_generic_term_count',
-					'query_var'				=> false,
-					'rewrite'				=> false
-				]
-			);
-		}
-
-		// get non-builtin hierarchical taxonomies
-		$taxonomies = get_taxonomies(
-			[
-				'object_type'	=> [ 'attachment' ],
-				'hierarchical'	=> true,
-				'_builtin'		=> false
-			],
-			'objects',
-			'and'
-		);
-
-		$media_taxonomies = [];
-
-		foreach ( $taxonomies as $taxonomy => $object ) {
-			$media_taxonomies[$taxonomy] = $taxonomy . ' (' . $object->labels->menu_name . ')';
-		}
-
-		$tax = $this->options['folders']['media_taxonomy'];
-
-		// selected hierarchical taxonomy does not exists?
-		if ( ! in_array( $tax, $media_taxonomies, true ) ) {
-			// check taxonomy existence
-			if ( ( $taxonomy = get_taxonomy( $tax ) ) !== false ) {
-				// update
-				$media_taxonomies[$tax] = $tax . ' (' . $taxonomy->labels->menu_name . ')';
-			// is it really old taxonomy?
-			} elseif ( in_array( $tax, $this->folders->get_taxonomies(), true ) ) {
-				$this->register_media_taxonomy( $tax );
-
-				$media_taxonomies[$tax] = $tax;
-			// use default taxonomy
-			} else {
-				$media_taxonomies[$tax] = $tax;
-				$this->options['folders']['media_taxonomy'] = $this->defaults['folders']['media_taxonomy'];
-
-				update_option( 'responsive_lightbox_folders', $this->options['folders'] );
-			}
-		}
-
-		$this->settings->settings['folders']['fields']['media_taxonomy']['options'] = $media_taxonomies;
-	}
-
-	/**
-	 * Register media taxonomy.
-	 *
-	 * @return void
-	 */
-	public function register_media_taxonomy( $taxonomy ) {
-		$show_in_menu = ( $this->options['folders']['show_in_menu'] && ( ( $taxonomy === 'rl_media_folder' && $this->options['folders']['media_taxonomy'] === 'rl_media_folder' ) || ( $taxonomy !== 'rl_media_folder' && $this->options['folders']['media_taxonomy'] !== 'rl_media_folder' ) ) );
-
-		register_taxonomy(
-			$taxonomy,
-			'attachment',
-			[
-				'public'				=> true,
-				'hierarchical'			=> true,
-				'labels'				=> [
-					'name'				=> _x( 'Media Folders', 'taxonomy general name', 'responsive-lightbox' ),
-					'singular_name'		=> _x( 'Media Folder', 'taxonomy singular name', 'responsive-lightbox' ),
-					'search_items'		=> __( 'Search Folders', 'responsive-lightbox' ),
-					'all_items'			=> __( 'All Files', 'responsive-lightbox' ),
-					'parent_item'		=> __( 'Parent Folder', 'responsive-lightbox' ),
-					'parent_item_colon'	=> __( 'Parent Folder:', 'responsive-lightbox' ),
-					'edit_item'			=> __( 'Edit Folder', 'responsive-lightbox' ),
-					'update_item'		=> __( 'Update Folder', 'responsive-lightbox' ),
-					'add_new_item'		=> __( 'Add New Folder', 'responsive-lightbox' ),
-					'new_item_name'		=> __( 'New Folder Name', 'responsive-lightbox' ),
-					'not_found'			=> __( 'No folders found.', 'responsive-lightbox' ),
-					'menu_name'			=> _x( 'Folders', 'taxonomy general name', 'responsive-lightbox' ),
-				],
-				'show_ui'				=> ! ( $taxonomy === 'rl_media_folder' && $this->options['folders']['media_taxonomy'] !== 'rl_media_folder' ),
-				'show_in_menu'			=> $show_in_menu,
-				'show_in_nav_menus'		=> false,
-				'show_in_quick_edit'	=> true,
-				'show_tagcloud'			=> false,
-				'show_admin_column'		=> $show_in_menu,
-				'update_count_callback'	=> '_update_generic_term_count',
-				'query_var'				=> false,
-				'rewrite'				=> false
-			]
-		);
-	}
-
-	/**
 	 * Enqueue admin scripts and styles.
 	 *
 	 * @param string $page
@@ -1650,27 +1592,47 @@ class Responsive_Lightbox {
 	public function admin_scripts_styles( $page ) {
 		global $typenow;
 
-		// settings?
-		if ( preg_match( '/^(toplevel|lightbox)_page_responsive-lightbox-(' . implode( '|', array_keys( $this->settings->get_data( 'tabs' ) ) ) . ')$/', $page ) === 1 ) {
-			wp_enqueue_script( 'responsive-lightbox-admin', RESPONSIVE_LIGHTBOX_URL . '/js/admin.js', [ 'jquery', 'wp-color-picker' ], $this->defaults['version'] );
+		// highlight Add-ons menu item in admin menu
+		wp_register_style( 'responsive-lightbox-admin-menu', false );
+		wp_enqueue_style( 'responsive-lightbox-admin-menu' );
+		wp_add_inline_style( 'responsive-lightbox-admin-menu', '
+			#adminmenu .toplevel_page_responsive-lightbox-settings .wp-submenu a[href*="tab=addons"] {
+				color: #00a32a;
+			}
+			#adminmenu .toplevel_page_responsive-lightbox-settings .wp-submenu a[href*="tab=addons"]:hover,
+			#adminmenu .toplevel_page_responsive-lightbox-settings .wp-submenu li.current a[href*="tab=addons"] {
+				color: #00a32a;
+			}
+		' );
+
+		$page_raw = isset( $_GET['page'] ) ? wp_unslash( $_GET['page'] ) : '';
+		$page_parts = $page_raw !== '' ? explode( '&', $page_raw, 2 ) : [ '' ];
+		$page_slug = $page_parts[0] !== '' ? sanitize_key( $page_parts[0] ) : '';
+
+		// settings pages?
+		if ( $page_slug === 'responsive-lightbox-settings' ) {
+			wp_enqueue_script( 'responsive-lightbox-admin-theme', RESPONSIVE_LIGHTBOX_URL . '/js/admin-theme.js', [], $this->defaults['version'] );
+			wp_enqueue_script( 'responsive-lightbox-admin-settings', RESPONSIVE_LIGHTBOX_URL . '/js/admin-settings.js', [ 'jquery' ], $this->defaults['version'] );
 
 			// prepare script data
 			$script_data = [
 				'resetSettingsToDefaults'	=> esc_html__( 'Are you sure you want to reset these settings to defaults?', 'responsive-lightbox' ),
-				'taxNonce'					=> wp_create_nonce( 'rl-folders-ajax-taxonomies-nonce' )
+				'taxNonce'					=> wp_create_nonce( 'rl-folders-ajax-taxonomies-nonce' ),
+				'errorProcessingTaxonomies'	=> esc_html__( 'An error occurred while processing taxonomies.', 'responsive-lightbox' ),
+				'errorLoadingTaxonomies'	=> esc_html__( 'An error occurred while loading taxonomies.', 'responsive-lightbox' )
 			];
 
-			wp_add_inline_script( 'responsive-lightbox-admin', 'var rlArgsAdmin = ' . wp_json_encode( $script_data ) . ";\n", 'before' );
-
-			wp_enqueue_style( 'wp-color-picker' );
+			wp_add_inline_script( 'responsive-lightbox-admin-settings', 'var rlArgsAdmin = ' . wp_json_encode( $script_data ) . ";\n", 'before' );
 
 			wp_enqueue_style( 'responsive-lightbox-admin', RESPONSIVE_LIGHTBOX_URL . '/css/admin.css', [], $this->defaults['version'] );
-		// galleries?
-		} elseif ( in_array( $page, [ 'post.php', 'post-new.php' ], true ) && get_post_type() === 'rl_gallery' || ( $page === 'edit.php' && $typenow === 'rl_gallery' ) ) {
+			wp_enqueue_style( 'responsive-lightbox-admin-settings', RESPONSIVE_LIGHTBOX_URL . '/css/admin-settings.css', [ 'responsive-lightbox-admin' ], $this->defaults['version'] );
+		// gallery editor screens
+		} elseif ( in_array( $page, [ 'post.php', 'post-new.php' ], true ) && get_post_type() === 'rl_gallery' ) {
 			wp_enqueue_media();
 
 			wp_enqueue_script( 'responsive-lightbox-admin-select2', RESPONSIVE_LIGHTBOX_URL . '/assets/select2/select2.full' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', [ 'jquery' ], '4.1.0' );
-			wp_enqueue_script( 'responsive-lightbox-admin-galleries', RESPONSIVE_LIGHTBOX_URL . '/js/admin-galleries.js', [ 'jquery', 'underscore', 'wp-color-picker', 'jquery-ui-sortable' ], $this->defaults['version'] );
+			wp_enqueue_script( 'responsive-lightbox-admin-theme', RESPONSIVE_LIGHTBOX_URL . '/js/admin-theme.js', [], $this->defaults['version'] );
+			wp_enqueue_script( 'responsive-lightbox-admin-galleries', RESPONSIVE_LIGHTBOX_URL . '/js/admin-galleries.js', [ 'jquery', 'underscore', 'jquery-ui-sortable' ], $this->defaults['version'] );
 
 			// get fields
 			$fields = $this->galleries->get_data( 'fields' );
@@ -1703,10 +1665,24 @@ class Responsive_Lightbox {
 
 			wp_add_inline_script( 'responsive-lightbox-admin-galleries', 'var rlArgsGalleries = ' . wp_json_encode( $script_data ) . ";\n", 'before' );
 
-			wp_enqueue_style( 'wp-color-picker' );
 			wp_enqueue_style( 'responsive-lightbox-admin', RESPONSIVE_LIGHTBOX_URL . '/css/admin.css', [], $this->defaults['version'] );
 			wp_enqueue_style( 'responsive-lightbox-admin-select2', RESPONSIVE_LIGHTBOX_URL . '/assets/select2/select2' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.css', [], '4.1.0' );
 			wp_enqueue_style( 'responsive-lightbox-admin-galleries', RESPONSIVE_LIGHTBOX_URL . '/css/admin-galleries.css', [], $this->defaults['version'] );
+		// gallery list screen
+		} elseif ( $page === 'edit.php' && $typenow === 'rl_gallery' ) {
+			wp_enqueue_style( 'responsive-lightbox-admin', RESPONSIVE_LIGHTBOX_URL . '/css/admin.css', [], $this->defaults['version'] );
+
+			// Keep thumbnail column layout without loading full gallery editor styles on list table screens.
+			wp_register_style( 'responsive-lightbox-admin-galleries-list', false );
+			wp_enqueue_style( 'responsive-lightbox-admin-galleries-list' );
+			wp_add_inline_style(
+				'responsive-lightbox-admin-galleries-list',
+				'.wp-list-table .column-image { width: 80px; }' .
+				'.wp-list-table .column-image .media-icon { position: relative; overflow: hidden; text-align: center; height: 62px; }' .
+				'.wp-list-table .column-image img { position: absolute; left: 50%; top: 50%; height: 100%; width: auto; transform: translate(-50%, -50%); }' .
+				'.wp-list-table .column-image img.format-portrait { width: 100%; height: auto; }' .
+				'.wp-list-table .column-image span { display: block; }'
+			);
 		// plugins?
 		} elseif ( $page === 'plugins.php' ) {
 			add_thickbox();
@@ -2073,69 +2049,73 @@ class Responsive_Lightbox {
 			global $post;
 
 			if ( is_object( $post ) ) {
-				// is gallery present in content
-				$has_gallery = has_shortcode( $post->post_content, 'gallery' ) || has_shortcode( $post->post_content, 'rl_gallery' );
+				// always load scripts on single rl_gallery pages (gallery added via gallery_preview filter, not in post_content)
+				if ( get_post_type( $post ) === 'rl_gallery' && is_singular( 'rl_gallery' ) ) {
+					$contitional_scripts = true;
+				} else {
+					// is gallery present in content
+					$has_gallery = has_shortcode( $post->post_content, 'gallery' ) || has_shortcode( $post->post_content, 'rl_gallery' );
 
-				// are images present in content
-				preg_match_all( '/<a(.*?)href=(?:\'|")([^<]*?).(bmp|gif|jpeg|jpg|png|webp)(?:\'|")(.*?)>/i', $post->post_content, $links );
+					// are images present in content
+					preg_match_all( '/<a(.*?)href=(?:\'|")([^<]*?).(bmp|gif|jpeg|jpg|png|webp)(?:\'|")(.*?)>/i', $post->post_content, $links );
 
-				$has_images = (bool) $links[0];
+					$has_images = (bool) $links[0];
 
-				if ( $has_gallery === false && $has_images === false )
-					$contitional_scripts = false;
+					if ( $has_gallery === false && $has_images === false )
+						$contitional_scripts = false;
+				}
 			}
 		}
 
-		if ( ! empty( $args['script'] ) && ! empty( $args['selector'] ) && apply_filters( 'rl_lightbox_conditional_loading', $contitional_scripts ) != false ) {
-			wp_register_script( 'responsive-lightbox-infinite-scroll', RESPONSIVE_LIGHTBOX_URL . '/assets/infinitescroll/infinite-scroll.pkgd' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', [ 'jquery' ], '4.0.1' );
+		wp_register_script( 'dompurify', plugins_url( 'assets/dompurify/purify.min.js', __FILE__ ), [], '3.3.1', $this->options['settings']['loading_place'] === 'footer' );
 
-			if ( ! wp_script_is( 'dompurify', 'registered' ) ) {
-				wp_register_script( 'dompurify', plugins_url( 'assets/dompurify/purify.min.js', __FILE__ ), [], '3.3.1', $this->options['settings']['loading_place'] === 'footer' );
+		wp_register_script( 'responsive-lightbox-infinite-scroll', plugins_url( 'assets/infinitescroll/infinite-scroll.pkgd' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', __FILE__ ), [ 'jquery' ], '4.0.1', $this->options['settings']['loading_place'] === 'footer' );
+
+		wp_register_script( 'responsive-lightbox-sanitizer', plugins_url( 'js/sanitizer.js', __FILE__ ), [ 'dompurify' ], $this->defaults['version'], $this->options['settings']['loading_place'] === 'footer' );
+
+		// Default iframe host allowlist. Plugins/themes may extend via the
+		// `rl_sanitize_allowed_hosts` filter. Hostnames should be bare hostnames
+		// (e.g. 'youtube.com', 'player.vimeo.com'). Same-origin URLs are always allowed.
+		$default_sanitize_allowed_hosts = array(
+			'youtube.com',
+			'www.youtube.com',
+			'youtu.be',
+			'vimeo.com',
+			'player.vimeo.com',
+		);
+
+		$sanitize_allowed_hosts = (array) apply_filters( 'rl_sanitize_allowed_hosts', $default_sanitize_allowed_hosts );
+
+		// Expose allowed hosts to the frontend sanitizer script before it runs.
+		wp_add_inline_script(
+			'responsive-lightbox-sanitizer',
+			'window.RLG = window.RLG || {}; window.RLG.sanitizeAllowedHosts = ' . wp_json_encode( array_values( $sanitize_allowed_hosts ) ) . ';',
+			'before'
+		);
+
+		wp_register_script( 'responsive-lightbox', plugins_url( 'js/front.js', __FILE__ ), [ 'jquery', 'underscore', 'responsive-lightbox-infinite-scroll', 'responsive-lightbox-sanitizer' ], $this->defaults['version'], $this->options['settings']['loading_place'] === 'footer' );
+
+		$args['woocommerce_gallery'] = false;
+
+		if ( class_exists( 'WooCommerce' ) ) {
+			global $woocommerce;
+
+			if ( $this->options['settings']['woocommerce_gallery_lightbox'] === true ) {
+				if ( version_compare( $woocommerce->version, '3.0', ">=" ) )
+					$args['woocommerce_gallery'] = true;
 			}
+		}
 
-			wp_register_script( 'responsive-lightbox-sanitizer', plugins_url( 'js/sanitizer.js', __FILE__ ), [ 'dompurify' ], $this->defaults['version'], $this->options['settings']['loading_place'] === 'footer' );
+		$scripts[] = 'responsive-lightbox';
 
-			// Default iframe host allowlist. Plugins/themes may extend via the
-			// `rl_sanitize_allowed_hosts` filter. Hostnames should be bare hostnames
-			// (e.g. 'youtube.com', 'player.vimeo.com'). Same-origin URLs are always allowed.
-			$default_sanitize_allowed_hosts = array(
-				'youtube.com',
-				'www.youtube.com',
-				'youtu.be',
-				'vimeo.com',
-				'player.vimeo.com',
-			);
+		$args['ajaxurl'] = admin_url( 'admin-ajax.php' );
+		$args['nonce'] = wp_create_nonce( 'rl_nonce' );
+		$args['preview'] = isset( $_GET['rl_gallery_revision_id'], $_GET['preview'] ) && $_GET['preview'] === 'true';
+		$args['postId'] = (int) get_the_ID();
+		$args['scriptExtension'] = array_key_exists( $args['script'], apply_filters( 'rl_settings_licenses', [] ) );
 
-			$sanitize_allowed_hosts = (array) apply_filters( 'rl_sanitize_allowed_hosts', $default_sanitize_allowed_hosts );
-
-			// Expose allowed hosts to the frontend sanitizer script before it runs.
-			wp_add_inline_script(
-				'responsive-lightbox-sanitizer',
-				'window.RLG = window.RLG || {}; window.RLG.sanitizeAllowedHosts = ' . wp_json_encode( array_values( $sanitize_allowed_hosts ) ) . ';',
-				'before'
-			);
-
-			wp_register_script( 'responsive-lightbox', plugins_url( 'js/front.js', __FILE__ ), [ 'jquery', 'underscore', 'responsive-lightbox-infinite-scroll', 'responsive-lightbox-sanitizer' ], $this->defaults['version'], $this->options['settings']['loading_place'] === 'footer' );
-
-			$args['woocommerce_gallery'] = false;
-
-			if ( class_exists( 'WooCommerce' ) ) {
-				global $woocommerce;
-
-				if ( $this->options['settings']['woocommerce_gallery_lightbox'] === true ) {
-					if ( version_compare( $woocommerce->version, '3.0', ">=" ) )
-						$args['woocommerce_gallery'] = true;
-				}
-			}
-
-			$scripts[] = 'responsive-lightbox';
-
-			$args['ajaxurl'] = admin_url( 'admin-ajax.php' );
-			$args['nonce'] = wp_create_nonce( 'rl_nonce' );
-			$args['preview'] = isset( $_GET['rl_gallery_revision_id'], $_GET['preview'] ) && $_GET['preview'] === 'true';
-			$args['postId'] = (int) get_the_ID();
-			$args['scriptExtension'] = array_key_exists( $args['script'], apply_filters( 'rl_settings_licenses', [] ) );
-
+		// only enqueue if conditional loading allows it
+		if ( $contitional_scripts ) {
 			// enqueue scripts
 			if ( $scripts && is_array( $scripts ) ) {
 				foreach ( $scripts as $script ) {

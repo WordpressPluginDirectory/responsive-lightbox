@@ -41,7 +41,6 @@ class Responsive_Lightbox_Frontend {
 		add_action( 'wp_enqueue_scripts', [ $this, 'wp_dequeue_scripts' ], 100 );
 		add_action( 'rl_before_gallery', [ $this, 'before_gallery' ], 10, 2 );
 		add_action( 'rl_after_gallery', [ $this, 'after_gallery' ], 10, 2 );
-		add_action( 'after_setup_theme', [ $this, 'woocommerce_gallery_init' ], 1000 );
 
 		// filters
 		add_filter( 'rl_gallery_container_class', [ $this, 'gallery_container_class' ], 10, 3 );
@@ -99,7 +98,7 @@ class Responsive_Lightbox_Frontend {
 				'script'	=> $rl->options['configuration'][$script],
 				'plugin'	=> $rl->options['settings']
 			],
-			'supports'	=> $scripts[$script]['supports']
+			'supports'	=> isset( $scripts[$script]['supports'] ) ? $scripts[$script]['supports'] : []
 		];
 
 		// workaround for builder galleries to bypass images_as_gallery option, applied only to rl_gallery posts
@@ -518,7 +517,7 @@ class Responsive_Lightbox_Frontend {
 		$rl = Responsive_Lightbox();
 
 		// get gallery fields
-		$gallery_fields = $rl->settings->settings[$type . '_gallery']['fields'];
+		$gallery_fields = $rl->settings->get_setting_fields( $type . '_gallery' );
 
 		// assign settings and defaults
 		$gallery_defaults = $rl->defaults[$type . '_gallery'];
@@ -648,7 +647,7 @@ class Responsive_Lightbox_Frontend {
 
 		return [
 			'size' => [
-				'title'			=> __( 'Size', 'responsive-lightbox' ),
+				'title'			=> __( 'Image Size', 'responsive-lightbox' ),
 				'type'			=> 'select',
 				'description'	=> __( 'Specify the image size to use for the thumbnail display.', 'responsive-lightbox' ),
 				'default'		=> 'medium',
@@ -666,7 +665,7 @@ class Responsive_Lightbox_Frontend {
 				]
 			],
 			'orderby' => [
-				'title'			=> __( 'Orderby', 'responsive-lightbox' ),
+				'title'			=> __( 'Order By', 'responsive-lightbox' ),
 				'type'			=> 'select',
 				'description'	=> __( 'Specify how to sort the display thumbnails.', 'responsive-lightbox' ),
 				'default'		=> 'menu_order',
@@ -815,8 +814,8 @@ class Responsive_Lightbox_Frontend {
 			$ids = [];
 
 			if ( ! empty( $shortcode_atts['include'] ) ) {
-				// filter attachment IDs
-				$include = array_unique( array_filter( array_map( 'intval', explode( ',', $shortcode_atts['include'] ) ) ) );
+				// Normalize input from shortcode strings and widget/programmatic array payloads.
+				$include = wp_parse_id_list( $shortcode_atts['include'] );
 
 				// any attachments?
 				if ( ! empty( $include ) ) {
@@ -833,9 +832,9 @@ class Responsive_Lightbox_Frontend {
 						]
 					);
 				}
-			} elseif ( ! empty( $exclude ) ) {
-				// filter attachment IDs
-				$exclude = array_unique( array_filter( array_map( 'intval', explode( ',', $shortcode_atts['exclude'] ) ) ) );
+			} elseif ( ! empty( $shortcode_atts['exclude'] ) ) {
+				// Normalize input from shortcode strings and widget/programmatic array payloads.
+				$exclude = wp_parse_id_list( $shortcode_atts['exclude'] );
 
 				// any attachments?
 				if ( ! empty( $exclude ) ) {
@@ -893,7 +892,7 @@ class Responsive_Lightbox_Frontend {
 					'script'	=> $rl->options['configuration'][$script],
 					'plugin'	=> $rl->options['settings']
 				],
-				'supports'	=> $scripts[$script]['supports'],
+				'supports'	=> isset( $scripts[$script]['supports'] ) ? $scripts[$script]['supports'] : [],
 				'image_id'	=> 0,
 				'caption'	=> '',
 				'title'		=> '',
@@ -1134,7 +1133,6 @@ class Responsive_Lightbox_Frontend {
 						// remove scripts
 						wp_dequeue_script( 'prettyPhoto' );
 						wp_dequeue_script( 'prettyPhoto-init' );
-						wp_dequeue_script( 'fancybox' );
 						wp_dequeue_script( 'enable-lightbox' );
 					}
 				} else {
@@ -1165,7 +1163,6 @@ class Responsive_Lightbox_Frontend {
 						// remove scripts
 						wp_dequeue_script( 'prettyPhoto' );
 						wp_dequeue_script( 'prettyPhoto-init' );
-						wp_dequeue_script( 'fancybox' );
 						wp_dequeue_script( 'enable-lightbox' );
 					}
 				}

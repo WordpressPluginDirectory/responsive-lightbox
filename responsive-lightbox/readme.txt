@@ -3,9 +3,9 @@ Contributors: dfactory
 Donate link: http://www.dfactory.co/
 Tags: gallery, galleries, lightbox, image, images
 Requires at least: 6.0
-Tested up to: 6.9
-Stable tag: 2.6.1
-Requires PHP: 5.6
+Tested up to: 6.9.1
+Stable tag: 2.7.1
+Requires PHP: 7.0
 License: MIT License
 License URI: http://opensource.org/licenses/MIT
 
@@ -139,6 +139,24 @@ Responsive Lightbox and Gallery plugin comes with many styles and effects alread
 2. screenshot-2.jpg
 
 == Changelog ==
+
+= 2.7.1 =
+* New: Gallery UI revamp with improved editor reliability
+* Fix: Media frame reuse hardening for gallery editor stability
+* Fix: Lightbox settings now save boolean fields correctly
+* Fix: Handle array gallery include/exclude attrs safely
+* Fix: Preserve image alt text in PrettyPhoto galleries
+
+= 2.7.0 =
+* New: Complete Settings API revamp with modern UI theming
+* New: Enhanced admin interface with improved settings tabs and navigation
+* New: Settings API architecture for better extensibility and maintainability
+* Tweak: Gallery Builder improvements and UI enhancements
+* Tweak: Improved settings validation and sanitization across all tabs
+* Tweak: Better compatibility with WordPress 6.9
+* Tweak: Enhanced gallery preview functionality and AJAX behaviors
+* Fix: Folders drag-and-drop interaction with select-all functionality
+* Fix: Folders taxonomy validation and data consistency
 
 = 2.6.1 =
 * Security: Fix potential XSS vulnerability in comment lightbox content
@@ -584,5 +602,5 @@ Initial release
 
 == Upgrade Notice ==
 
-= 2.6.1 =
-Fix potential XSS vulnerabilities in comment lightbox content and DOMPurify library
+= 2.7.1 =
+Gallery UI revamp stabilization with improved editor reliability and multiple fixes.
